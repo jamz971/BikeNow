@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title></title>
+
+    <link href="angular-chart.css" rel="stylesheet">
+    <!-- Map -->
+    <link href="https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.css" rel='stylesheet' />
+    <!-- compiled css output -->
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/ionic.app.css" rel="stylesheet">
+</head>
+<body ng-controller="AppCtrl" class="platform-ios platform-cordova platform-webview" id="starter">
+<div id="loader-content">
+    <ion-header-bar class="bar">
+        <h1 class="title">Bicloo Now</h1>
+    </ion-header-bar>
+    <ion-content id="content" data-tap-disabled="true" style="text-align: center">
+        <h4 style="opacity: 0.5">Chargement de l'application<br>en cours<br>...</h4>
+    </ion-content>
+</div>
+<div id="starter-content">
+    <ion-side-menus>
+        <!-- Center content -->
+        <ion-side-menu-content>
+
+            <ion-header-bar id="" class="bar item-input-inset" style="">
+                    <button menu-toggle="left" ng-click="toggleLeft()" class="button button-icon icon ion-ios-heart-outline "></button>
+                        <!--<label class="item-input-wrapper">
+                            <i class="icon ion-ios-search placeholder-icon"></i>
+                            <input type="search" placeholder="Recherche">
+                        </label>-->
+              <h1 class="title"><img src="img/BikeNow2.png" height="40" ></h1>
+
+
+
+                    <button menu-toggle="right" ng-click="toggleRight()" class="button button-icon icon ion-ios-settings right"></button>
+                 </ion-header-bar>
+
+            <ion-content id="map" data-tap-disabled="true">
+
+            </ion-content>
+
+            <div id="footer" class="bar bar-clear">
+                <div class="col">
+                    <button class="button button-positive button-block icon ion-navigate" ng-hide="inProgress" ng-click="centerToPosition()"></button>
+                    <button class="button button-positive button-block" ng-hide="!inProgress" ><ion-spinner icon="ripple" class="spinner spinner-light"></ion-spinner></button>
+                </div>
+                <div class="col col-67">
+                    <div class="button-bar">
+                        <button class="button button-assertive button-block" ng-class="prendreBtn" ng-click="getVeloDispo()">Vélos</button>
+                        <button class="button button-assertive button-block" ng-class="deposerBtn" ng-click="getBorneDispo()">Places</button>
+                    </div>
+                </div>
+                <div class="col">
+                    <button class="button button-dark button-block icon ion-arrow-up-b" ng-hide="open" ng-click="toggleMainPanel()"></button>
+                    <button class="button button-dark button-block icon ion-arrow-down-b" ng-hide="!open" ng-click="toggleMainPanel()"></button>
+                </div>
+            </div>
+
+            <ion-content id="cardStationProche" scroll="false">
+            <div class="item item-divider">
+                        Stations proche de vous
+            </div>
+            <ion-content scroll="true" style="margin-top : 36px;">
+            <div id="listStation" scroll="true">
+                <div class="list">
+
+                    <a class="item" ng-repeat="item in stations | orderBy : 'distanceInt()' | limitTo : 3" ng-focus="console.log(item.name);" ng-click="showStation(item,true)">
+                        <div class="row" style="margin-top: -18px">
+                            <div class="col">
+                                <h3>{{item.name}} <i class="icon ion-card" ng-show="item.banking"></i></h3>
+                            </div>
+                            <div class="col" style="text-align: right">
+                                <p style="color:#484848;font-size: 11px;"><i class="icon ion-location"></i> {{item.distance()}}</p>
+                            </div>
+
+                        </div>
+                        <div class="row" onload="showPanelGraph(item);">
+                            <div class="col" style="text-align: right; padding-top: 15px;">
+                                <p style="color:#ef4e3a;font-size: 23px;">{{item.velosDispo}} Vélos</p>
+                            </div>
+                            <div class="col-20" style="text-align: center">
+                                <canvas id="doughnut" class="chart chart-doughnut" data="item.data()" labels="labels" colours="colors" width="50" height="50"></canvas>
+                            </div>
+                            <div class="col" style="text-align: left; padding-top: 15px;">
+                                <p style="color:#838383;font-size: 23px;">{{item.bornesDispo}} Places</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            </ion-content>
+            
+                
+
+            </ion-content>
+
+
+
+        </ion-side-menu-content>
+        <!-- Left menu -->
+        <ion-side-menu side="right" class="contentMenu">
+            <ion-header-bar class="bar-dark">
+                <h1 class="title">Option</h1>
+            </ion-header-bar>
+            <ion-content>
+                <ion-toggle ng-model="cb.checked" ng-checked="cb.checked" ng-change="onCheckedToggle()" toggle-class="toggle-balanced">Station avec CB </ion-toggle>
+            </ion-content>
+            <ion-footer-bar class="bar-dark" style="text-align: center;">
+                    <p style="margin: auto;">Version : Beta-V0.2<br><small class="">CASSIN Kémy</small>
+                    </p>
+            </ion-footer-bar>
+        </ion-side-menu>
+
+        <ion-side-menu side="left" class="contentMenu">
+            <ion-header-bar class="bar-royal">
+                <button class="button button-icon icon ion-ios-trash-outline" ng-click="data.showDelete = !data.showDelete;"></button>
+                <h1 class="title">Mes stations</h1>
+            </ion-header-bar>
+            <ion-content class="favorisContent" scroll="true">
+                        <ion-list show-delete="data.showDelete">
+
+                            <ion-item class="item" ng-repeat="item in stations | filter: {favoris : true} | orderBy : 'distanceInt()'" ng-click="showStation(item,false)">
+                                <div class="row" style="margin-top: -10px; margin-bottom: 5px">
+                                    <div class="col">
+                                        <h3>{{item.name}} <i class="icon ion-card" ng-show="item.banking"></i></h3>
+                                    </div>
+                                </div>
+
+                                    <div class="row">
+                                        <div class="col-50" style="text-align: center">
+                                           <canvas id="doughnut" class="chart chart-doughnut" data="item.data()" labels="labels" colours="colors" width="80" height="80"></canvas>
+                                        </div>
+                                        <div class="col-50">
+                                            <p style="color:#ef4e3a;font-size: 18px;">{{item.velosDispo}} Vélos</p>
+                                            <p style="color:#838383;font-size: 18px;">{{item.bornesDispo}} Places</p>
+                                            <p style="color:#484848;font-size: 13px;"><i class="icon ion-location"></i> {{item.distance()}}</p>
+                                        </div>
+                                    </div>
+                                <ion-delete-button class="ion-minus-circled"
+                                                   ng-click="delFavoris(item)">
+                                    </ion-delete-button>
+                            </ion-item>
+                            </ion-list>
+                    </ion-content>
+        </ion-side-menu>
+    </ion-side-menus>
+</div>
+
+
+<!-- ionic/angularjs js -->
+<script src="lib/ionic/js/ionic.bundle.js"></script>
+
+
+<!-- cordova script  -->
+<script src="ng-cordova.js"></script>
+<script src="cordova.js"></script>
+<script src="move.js"></script>
+<script src="Chart.js"></script>
+<script src="angular-chart.js"></script>
+
+<!-- map library -->
+<script src="https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.js"></script>
+<script src="http://www.mapquestapi.com/sdk/leaflet/v1.s/mq-routing.js?key=YOUR_KEY_HERE"></script>
+
+<!-- your app's js -->
+<script src="js/utils.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "OpenBikesApp",
+  "app_id": "8c5395a1",
+  "gulpStartupTasks": [
+    "sass",
+    "watch"
+  ],
+  "watchPatterns": [
+    "www/**/*",
+    "!www/lib/**/*"
+  ]
+}

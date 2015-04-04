@@ -1,0 +1,7 @@
+{
+    "stationCB" : false ,
+    "mesStations" : [
+        {"numStation" : 1 },
+        {"numStation" : 30 }
+        ]
+}
