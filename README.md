@@ -2,7 +2,7 @@
 
 ###Get Started
 
-1. Insatll [Node.JS](https://nodejs.org)
+1. Install [Node.JS](https://nodejs.org)
 2. Install IONIC Framework : `npm install -g cordova ionic`
 3. Fork Project
 4. It's Done :)
