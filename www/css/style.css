@@ -22,7 +22,8 @@
     /*margin-top: 900px;*/
 }
 #listStation{
-        overflow-y: scroll;
+    overflow-y: hidden;
+    overflow-y: hidden;
 }
 .stationHS{
     position:absolute;
@@ -151,7 +152,7 @@ a.leaflet-popup-close-button {
     left: -25px;
     z-index: 2;
     opacity: 0;
-    border: 10px solid rgba(0,166,205,1);;
+    border: 10px solid rgba(0,166,205,1);
     background: transparent;
     -webkit-border-radius: 60px;
     -moz-border-radius: 60px;

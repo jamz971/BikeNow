@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html id="openBike">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
@@ -12,12 +12,12 @@
     <link href="css/style.css" rel="stylesheet">
     <link href="css/ionic.app.css" rel="stylesheet">
 </head>
-<body ng-controller="AppCtrl" class="platform-ios platform-cordova platform-webview" id="starter">
+<body ng-controller="MainCtrl" class="platform-ios platform-cordova platform-webview">
 <div id="loader-content">
     <ion-header-bar class="bar">
         <h1 class="title">Bicloo Now</h1>
     </ion-header-bar>
-    <ion-content id="content" data-tap-disabled="true" style="text-align: center">
+    <ion-content id="content" style="text-align: center" scroll="false">
         <h4 style="opacity: 0.5">Chargement de l'application<br>en cours<br>...</h4>
     </ion-content>
 </div>
@@ -26,8 +26,8 @@
         <!-- Center content -->
         <ion-side-menu-content>
 
-            <ion-header-bar id="" class="bar item-input-inset" style="">
-                    <button menu-toggle="left" ng-click="toggleLeft()" class="button button-icon icon ion-ios-heart-outline "></button>
+            <ion-header-bar id="" class="bar item-input-inset">
+                    <button menu-toggle="left" ng-click="toggleLeft()" class="button button-icon icon ion-android-favorite-outline left"></button>
                         <!--<label class="item-input-wrapper">
                             <i class="icon ion-ios-search placeholder-icon"></i>
                             <input type="search" placeholder="Recherche">
@@ -36,8 +36,17 @@
 
 
 
-                    <button menu-toggle="right" ng-click="toggleRight()" class="button button-icon icon ion-ios-settings right"></button>
+                    <button menu-toggle="right" ng-click="toggleRight()" class="button button-icon icon ion-android-more-vertical right"></button>
                  </ion-header-bar>
+            <div class="bar bar-subheader" style="border-top: thin solid rgba(0, 0, 0, 0.1);border-bottom: thin solid rgba(0, 0, 0, 0.1); background-color: #f9f9f9; opacity: 0.9" ng-show="route.show">
+
+                <h5 style="float: left"><i class="icon ion-flag"></i> {{route.station.name}} <i class="icon ion-card" ng-show="route.station.banking"></i></h5>
+                <button class="button-icon ion-close-round" style="float: right ;margin-top: 8px" ng-click="closeDirection()"></button>
+                <p style="color:#484848;font-size: 11px; float: right; margin-top: 8px; margin-right: 5px"><i class="icon ion-location"></i> {{route.station.distance()}}</p>
+
+
+
+            </div>
 
             <ion-content id="map" data-tap-disabled="true">
 
@@ -45,7 +54,7 @@
 
             <div id="footer" class="bar bar-clear">
                 <div class="col">
-                    <button class="button button-positive button-block icon ion-navigate" ng-hide="inProgress" ng-click="centerToPosition()"></button>
+                    <button class="button button-positive button-block icon ion-android-navigate" ng-hide="inProgress" ng-click="centerToPosition()"></button>
                     <button class="button button-positive button-block" ng-hide="!inProgress" ><ion-spinner icon="ripple" class="spinner spinner-light"></ion-spinner></button>
                 </div>
                 <div class="col col-67">
@@ -64,11 +73,11 @@
             <div class="item item-divider">
                         Stations proche de vous
             </div>
-            <ion-content scroll="true" style="margin-top : 36px;">
-            <div id="listStation" scroll="true">
+            <ion-content id="listStation" style="margin-top : 36px;" >
+            <div scroll="true">
                 <div class="list">
 
-                    <a class="item" ng-repeat="item in stations | orderBy : 'distanceInt()' | limitTo : 3" ng-focus="console.log(item.name);" ng-click="showStation(item,true)">
+                    <a class="item" ng-repeat="item in stations | filter :filterDistance | orderBy : 'distanceInt()'" ng-focus="console.log(item.name);" ng-click="showStation(item,true)">
                         <div class="row" style="margin-top: -18px">
                             <div class="col">
                                 <h3>{{item.name}} <i class="icon ion-card" ng-show="item.banking"></i></h3>
@@ -93,9 +102,6 @@
                 </div>
             </div>
             </ion-content>
-            
-                
-
             </ion-content>
 
 
@@ -120,7 +126,8 @@
                 <button class="button button-icon icon ion-ios-trash-outline" ng-click="data.showDelete = !data.showDelete;"></button>
                 <h1 class="title">Mes stations</h1>
             </ion-header-bar>
-            <ion-content class="favorisContent" scroll="true">
+            <ion-content class="favorisContent">
+
                         <ion-list show-delete="data.showDelete">
 
                             <ion-item class="item" ng-repeat="item in stations | filter: {favoris : true} | orderBy : 'distanceInt()'" ng-click="showStation(item,false)">
@@ -164,10 +171,10 @@
 
 <!-- map library -->
 <script src="https://api.tiles.mapbox.com/mapbox.js/v2.1.4/mapbox.js"></script>
-<script src="http://www.mapquestapi.com/sdk/leaflet/v1.s/mq-routing.js?key=YOUR_KEY_HERE"></script>
-
-<!-- your app's js -->
+<script src="http://open.mapquestapi.com/sdk/leaflet/v1.s/mq-map.js?key=Fmjtd%7Cluu82q6r2g%2C72%3Do5-94tn9f"></script>
+<script src="http://open.mapquestapi.com/sdk/leaflet/v1.s/mq-routing.js?key=Fmjtd%7Cluu82q6r2g%2C72%3Do5-94tn9f"></script>
 <script src="js/utils.js"></script>
+<script src="js/config.properties.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

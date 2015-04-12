@@ -8,5 +8,6 @@
   "watchPatterns": [
     "www/**/*",
     "!www/lib/**/*"
-  ]
+  ],
+  "defaultBrowser": "safari"
 }

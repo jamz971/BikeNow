@@ -1,7 +1,8 @@
-var starter;
-starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
+'use strict';
 
-    .run(function ($ionicPlatform, $rootScope,$cordovaStatusbar) {
+angular.module('openBike', ['ionic', 'ngCordova', 'chart.js'])
+
+    .run(function ($ionicPlatform, $rootScope, $cordovaStatusbar) {
         $ionicPlatform.ready(function () {
             if (window.cordova && window.cordova.plugins.Keyboard) {
                 cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
@@ -9,10 +10,9 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
             if (window.StatusBar) {
                 StatusBar.styleDefault();
             }
-            window.statusbar.visible = false;
         });
     })
-    .controller('AppCtrl', function ($scope, $http,$document, $ionicSideMenuDelegate, $ionicPopup,$ionicPlatform, $cordovaGeolocation) {
+    .controller('MainCtrl', function ($scope, $http, $document, $ionicSideMenuDelegate, $ionicPopup, $ionicPlatform, $cordovaGeolocation) {
 
         /**
          * Module de gestion des stations
@@ -26,27 +26,29 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
         $scope.stations = [];
         $scope.stationFavoris;
         $scope.labels = ["Velos Dispo", "Places Dispo"];
-        $scope.colors = ["#9e9e9e","#ef4e3a"];
+        $scope.colors = ["#9e9e9e", "#ef4e3a"];
         $scope.prendreBtn = "active";
         $scope.deposerBtn = "";
         $scope.currentOpenPopup;
         $scope.data = {
             showDelete: false,
-            showReorder : true
+            showReorder: true
         };
 
         $scope.open = true;
         $scope.inProgress;
+        $scope.route = {
+            station: {},
+            show: false
+        };
 
         var map;
         var VELO_DISPO = "VELO_DISPO";
         var BORNES_DISPO = "BORNES_DISPO";
         var action = VELO_DISPO;
-        var apiKey = '&apiKey=7a250017cf6524d013a3f3aeab071dada46ebe86';
+
         var timer = undefined;
         var miniMarker = false;
-        var city = ["nantes","lyon","paris"];
-        var cityIndex = 0;
         var positionInterval;
         //Méthode bornes dispo
         $scope.getBorneDispo = function () {
@@ -76,81 +78,89 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
         };
 
 
-
         $scope.toggleLeft = function () {
         };
 
-        $scope.toggleMainPanel = function(callback){
+        $scope.toggleMainPanel = function () {
             var heightSup = 296;
             var heightScreen = window.screen.height;
-            var dist =  heightScreen - heightSup;
-            var i = 1;
-            var mapCanvas = document.getElementById("map");
-            var cardStationProche = document.getElementById("cardStationProche");
-            var footer = document.getElementById("footer");
-            
-            if($scope.open) {
+            var dist = heightScreen - heightSup;
+
+            if ($scope.open) {
+                //Close Panel
                 $scope.open = false;
                 move('#map')
-                    .set('height', (232 + dist)+"px")
+                    .set('height', (232 + dist) + "px")
                     //.set('height', "89%")
                     .duration('0.1s')
-                    .end(function(){
+                    .end(function () {
                         map.invalidateSize(true);
                         move('#cardStationProche')
                             .ease('snap')
-                            .set('margin-top', (232 + dist)+"px")
+                            .set('margin-top', (232 + dist) + "px")
                             .duration('0.3s')
                             .end();
                         move('#footer')
                             .ease('snap')
-                            .set('margin-top', (173 + dist)+"px")
+                            .set('margin-top', (173 + dist) + "px")
                             .duration('0.3s')
                             .end();
                     });
-            }else{
+            } else {
+                //Open Panel
                 $scope.open = true;
                 map.closePopup();
                 move('#map')
-                    .set('height', 232+"px")
+                    .set('height', 232 + "px")
                     .duration('0.1s')
-                    .end(function(){
+                    .end(function () {
                         map.invalidateSize(true);
                     });
                 move('#cardStationProche')
                     .ease('snap')
-                    .set('margin-top', 232+"px")
+                    .set('margin-top', 232 + "px")
                     .duration('0.3s')
                     .end();
                 move('#footer')
                     .ease('snap')
-                    .set('margin-top', 173+"px")
+                    .set('margin-top', 173 + "px")
                     .duration('0.3s')
                     .end();
 
             }
         };
 
-        $scope.centerToPosition = function(){
-            if(!geolocation.inProgress){
+        $scope.centerToPosition = function () {
+            if (!geolocation.inProgress) {
                 geolocation.startLocation();
             }
 
         };
 
-        $scope.showStation = function(station,action){
-            if(action){
+        $scope.showStation = function (station, action) {
+            $scope.route.show = true;
+            $scope.route.station = station;
+            map.invalidateSize(true);
+
+            if (action) {
                 $scope.toggleMainPanel();
 
-            }else{
+
+            } else {
+                map.closePopup();
                 $ionicSideMenuDelegate.toggleLeft();
             }
-            setTimeout(function(){
-                map.setView([station.position.lat, station.position.lng], 16);
-                station.marker.openPopup();
-            },500);
+            setTimeout(function () {
+                Map.bound(station);
+                Map.getDirection(station);
+            }, 500);
 
 
+        };
+
+        $scope.closeDirection = function () {
+            $scope.route.show = false;
+            Map.hideDirection();
 
         };
 
@@ -158,9 +168,14 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
             Favoris.add();
         };
 
-        $scope.delFavoris = function(station){
+        $scope.delFavoris = function (station) {
             Favoris.del(station);
         };
+
+        $scope.filterDistance = function(station) {
+            return (station.distanceInt() <= 500);
+        }
+
         /**
          * Module de gestion des Favoris
          */
@@ -170,10 +185,10 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 var station = Marker.currentOpenPopup.station;
                 station.favoris = true;
                 var btnFavoris = document.getElementById('favoris');
-                btnFavoris.setAttribute("disabled","");
+                btnFavoris.setAttribute("disabled", "");
                 $ionicSideMenuDelegate.toggleLeft();
             },
-            del: function(station){
+            del: function (station) {
                 station.favoris = false;
             }
         };
@@ -194,7 +209,7 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 name: nameStation,
                 velosDispo: station.available_bikes,
                 bornesDispo: station.available_bike_stands,
-                data: function(){
+                data: function () {
                     dataArray[0] = this.bornesDispo;
                     dataArray[1] = this.velosDispo;
                     return dataArray;
@@ -212,12 +227,12 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                     if (User.position.lat != 0 && User.position.lng != 0) {
                         result = this.point.distanceTo(User.point);
                         result = Math.round(result);
-                        if(result>1000){
-                            result = result/1000;
+                        if (result > 1000) {
+                            result = result / 1000;
                             result = result + ' ';
-                            result = result.slice(0,4);
-                            result = result+' km';
-                        }else{
+                            result = result.slice(0, 4);
+                            result = result + ' km';
+                        } else {
                             result = result + ' m';
                         }
 
@@ -274,30 +289,37 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                     return stations[key];
                 },
                 updatePopupStations: function () {
-                    for (key in stations) {
+                    for (var key in stations) {
                         var marker = stations[key].marker;
                         marker.bindPopup(Marker.infoStationContent(stations[key]));
                     }
                 },
                 updateMarkerStations: function () {
-                    for (key in stations) {
+                    for (var key in stations) {
                         Marker.updateStationMarker(stations[key]);
                     }
                 },
                 refreshStationsData: function () {
-                    console.log("=====> Update Data Stations");
-                    $http.get('https://api.jcdecaux.com/vls/v1/stations?contract=' + city[cityIndex] + apiKey)
+                    console.log("=====> Start Update Data Stations");
+                    /*
+                    Rafraichir uniquement les stations se trouvant dans un rayon de 800m
+                    Ne plus rafraichir les stations suivant le niveau de zoom (quand stations en petites pastilles)
+                     */
+                    var debut = Date.now();
+                    $http.get(JCDECAUX_WEBSERVICE_URL)
                         .success(function (data) {
                             var i = -1;
                             Utils.sort(data);
-                            for (key in stations) {
+                            var stationsUpdate = 0;
+                            for (var key in stations) {
                                 i++;
                                 var station = stations[key];
                                 var updateStation = data[i];
                                 if (!station.equal(updateStation)) {
-                                    Utils.log("Update Station : " + station.name);
-                                    console.log(station);
-                                    console.log(updateStation);
+                                    //Utils.log("Update Station : " + station.name);
+                                    //console.log(station);
+                                    //console.log(updateStation);
+                                    stationsUpdate += 1;
                                     station.update(updateStation);
                                     Marker.updateStationMarker(station);
 
@@ -327,20 +349,33 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                                         var ctx = document.getElementById(station.name).getContext("2d");
                                         chart = new Chart(ctx).Doughnut(dataChart, {animateRotate: false});
                                     }
-
                                 }
                             }
+                            var fin = Date.now();
+                            var temps = fin - debut;
+                            Utils.log("Nombre de stations mise à jour : "+stationsUpdate);
+                            Utils.log("Temps de rafraichissement : "+temps);
+                            app.startRefresh();
+                        })
+                        .error(function(e){
+                            $ionicPopup.alert({
+                                title: 'Error : data error ',
+                                template: e.message
+                            });
+                            Utils.log("Data Error");
+                            app.startRefresh();
                         });
+
                 },
                 getProximityStation: function () {
-                    var station,distance = undefined;
-                    for (key in stations) {
-                        if(distance != undefined){
-                            if(stations[key].distanceInt() < distance) {
+                    var station, distance = null;
+                    for (var key in stations) {
+                        if (distance !== null) {
+                            if (stations[key].distanceInt() < distance) {
                                 station = stations[key];
                                 distance = stations[key].distanceInt();
                             }
-                        }else{
+                        } else {
                             distance = stations[key].distanceInt();
                         }
                     }
@@ -357,11 +392,11 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 lat: 0,
                 lng: 0
             },
-            equal : function(position){
-                if(this.position.lat == position.coords.latitude &&
-                this.position.lng == position.coords.longitude){
+            equal: function (position) {
+                if (this.position.lat == position.coords.latitude &&
+                    this.position.lng == position.coords.longitude) {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
 
@@ -379,8 +414,9 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 name: {},
                 chart: {},
                 station: {},
-                open : false
+                open: false
             };
+            $scope.currentOpenPopup = currentOpenPopup;
             return {
                 currentOpenPopup: currentOpenPopup,
                 createMarker: function (lat, lng, option) {
@@ -411,7 +447,7 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                         })
                     };
                     marker = this.createMarker(station.position.lat, station.position.lng, option);
-                    marker.bindPopup(this.infoStationContent(station),{className:"CustomPopup"});
+                    marker.bindPopup(this.infoStationContent(station), {className: "CustomPopup"});
 
                     marker.addEventListener("popupopen", function () {
                         if ($scope.open) {
@@ -440,10 +476,10 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
 
                         var btnFavoris = document.getElementById('favoris');
                         if (station.favoris) {
-                            btnFavoris.setAttribute("disabled","");
+                            btnFavoris.setAttribute("disabled", "");
                         } else {
-                           btnFavoris.addEventListener('click', $scope.addFavoris, false);
-                            btnFavoris.removeAttribute("disabled","");
+                            btnFavoris.addEventListener('click', $scope.addFavoris, false);
+                            btnFavoris.removeAttribute("disabled", "");
                         }
 
 
@@ -452,7 +488,7 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                     }, station);
                     marker.addEventListener("popupclose", function () {
                         currentOpenPopup.open = false;
-                        console.log("Status Popup : "+currentOpenPopup.open);
+                        console.log("Status Popup : " + currentOpenPopup.open);
                     });
                     return marker;
                 },
@@ -489,7 +525,6 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                     info += '</div>';
                     info += '</div>';
 
-
                     info += '</div>';
 
                     return info;
@@ -497,26 +532,20 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 updateStationMarker: function (station) {
                     var marker = station.marker;
                     var content = (station.status == "CLOSED") ? 'HS' : (action == VELO_DISPO) ? station.velosDispo : station.bornesDispo;
-                    var classMarker = ($scope.cb.checked == true && station.banking == false && action == VELO_DISPO) ? 'count-icon-hidden' : ((content != 'HS' && content > 0) ? ((miniMarker)?'mini-count-icon':'count-icon') :((miniMarker)?'mini-count-icon-close':'count-icon-close'));
+                    var classMarker = ($scope.cb.checked == true && station.banking == false && action == VELO_DISPO) ? 'count-icon-hidden' : ((content != 'HS' && content > 0) ? ((miniMarker) ? 'mini-count-icon' : 'count-icon') : ((miniMarker) ? 'mini-count-icon-close' : 'count-icon-close'));
 
-                    if(miniMarker){
+                    if (miniMarker) {
                         marker.setIcon(L.divIcon({
                                 //Style CSS of marker
                                 className: classMarker,
-                                //HTML value inner marker
-                                //html: content,
-                                // Set a markers width and height.
-                                //iconSize: [40, 40]
                                 iconSize: [15, 15]
                             })
                         );
-                    }else{
+                    } else {
                         marker.setIcon(L.divIcon({
                                 //Style CSS of marker
                                 className: classMarker,
-                                //HTML value inner marker
                                 html: content,
-                                // Set a markers width and height.
                                 iconSize: [40, 40]
 
                             })
@@ -538,131 +567,223 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
          * @type {{startRefresh: Function, stopRefresh: Function, resumeRefresh: Function}}
          */
         var app = {
+            stop : false,
             startRefresh: function () {
-                Utils.log("Start Refresh methode");
-                return setInterval(Stations.refreshStationsData, 30000);
+                //Utils.log("Start Refresh methode");
+                if(!this.stop){
+                    setTimeout(Stations.refreshStationsData, 30000);
+                }
             },
-            stopRefresh : function(){
+            stopRefresh: function () {
                 Utils.log("Stop Application");
-                clearInterval(timer);
+                this.stop = true;
+                //clearInterval(timer);
             },
-            resumeRefresh : function(){
+            resumeRefresh: function () {
                 Utils.log("Resume Application");
                 geolocation.startLocation();
-                timer = app.startRefresh();
+                this.stop = false;
+                app.startRefresh();
             }
         };
 
-        $ionicPlatform.on('pause',app.stopRefresh);
-        $ionicPlatform.on('resume',app.resumeRefresh);
+        $ionicPlatform.on('pause', app.stopRefresh);
+        $ionicPlatform.on('resume', app.resumeRefresh);
+
         var watchPosition;
-        var geolocation ={
-                    inProgress : $scope.inProgress,
-                    stopLocation : function(){
-                        Utils.log("Stop Location");
-                        watchPosition.clearWatch();
-                        $scope.$apply($scope.inProgress = false);
-                    },
-                    onSuccess : function (position) {
-                        Utils.log('Position Success');
-                        if(!User.equal(position)){
-                        User.position.lat = position.coords.latitude;
-                        User.position.lng = position.coords.longitude;
-                        if(User.marker==undefined && User.point==undefined){
-                            User.marker = Marker.createUserPositionMarker();
-                            User.marker.setZIndexOffset(1000);
-                            User.point = Marker.createPositionPoint();
-                            map.setView([User.position.lat, User.position.lng], 16);
+        var timeoutWatchPosition = null;
 
+        /**
+         * Module Géolocalisation et routing
+         * @type {{inProgress: (boolean|*), stopLocation: Function, onSuccess: Function, onError: Function, startLocation: Function}}
+         */
+        var geolocation = {
+            inProgress: $scope.inProgress,
+            stopLocation: function (success) {
+                Utils.log("Stop Location");
+                if (success) {
+                    console.log(User.position.lat + '|' + User.position.lng);
+                    if (!$scope.open) {
+                        $scope.toggleMainPanel();
+                    }
+                    var station = Stations.getProximityStation();
+                    setTimeout(function () {
+                        Map.bound(station);
+                    }, 800);
 
-                            setTimeout(function(){
-                                $scope.toggleMainPanel();
-                            },1000);
+                } else {
+                    Map.center(CURRENTCITY.position.lat, CURRENTCITY.position.lng, 15);
+                }
+                watchPosition.clearWatch();
+                timeoutWatchPosition = null;
+                $scope.$apply($scope.inProgress = false);
+                Stations.updatePopupStations();
+            },
+            onSuccess: function (position) {
+                Utils.log('Position Success');
+                //if(!User.equal(position)) {
+                    User.position.lat = position.coords.latitude;
+                    User.position.lng = position.coords.longitude;
+                    if (User.marker === undefined && User.point === undefined) {
+                        User.marker = Marker.createUserPositionMarker();
+                        User.marker.setZIndexOffset(1000);
+                        User.point = Marker.createPositionPoint();
+                    } else {
+                        User.marker.setLatLng([User.position.lat, User.position.lng]);
+                        User.marker.update();
+                        User.point = undefined;
+                        User.point = Marker.createPositionPoint();
+                    }
 
-                        }else{
-                            User.marker.setLatLng([User.position.lat,User.position.lng]);
-                            User.marker.update();
-                            User.point = undefined;
-                            User.point = Marker.createPositionPoint();
-                        }
-
-
-
-                        }else{
-                        geolocation.stopLocation();
-                        console.log(User.position.lat + '|' + User.position.lng);
-                        Stations.updatePopupStations();
-                        }
-
-                        },
-                    onError : function (e) {
-                    $ionicPopup.alert({
-                        title: 'Error : Code '+ e.code,
-                        template: e.message
-                    });
-                    Utils.log('Position Error');
-                    Map.center(47.218371, -1.553621, 15);
-                    Utils.log("Stop Location");
-                    watchPosition.clearWatch();
-                    $scope.$apply($scope.inProgress = false);
-                },
-                startLocation : function () {
+                /*}else{
+                    geolocation.stopLocation(true);
+                }*/
+                if(timeoutWatchPosition === null) {
+                    timeoutWatchPosition = setTimeout(function () {
+                        geolocation.stopLocation(true);
+                    }, 5000);
+                }
+            },
+            onError: function (e) {
+                $ionicPopup.alert({
+                    title: 'Error : Code ' + e.code,
+                    template: e.message
+                });
+                Utils.log('Position Error');
+                Utils.log("Stop Location");
+                geolocation.stopLocation(false);
+            },
+            startLocation: function () {
                 Utils.log("Start Location");
                 $scope.inProgress = true;
                 var watchOptions = {
-                    frequency : 2000,
-                    timeout : 10000,
+                    frequency: 1000,
+                    //timeout: 10000,
                     enableHighAccuracy: false
                 };
-                watchPosition =  $cordovaGeolocation.watchPosition(watchOptions);
-                watchPosition.then(null,this.onError,this.onSuccess);
+                watchPosition = $cordovaGeolocation.watchPosition(watchOptions);
+                watchPosition.then(null, this.onError, this.onSuccess);
             }
 
-            };
+        };
 
+        var route = null;
+        /**
+         * Module Map
+         * @type {{init: Function, center: Function, bound: Function, getDirection: Function}}
+         */
         var Map = {
-            init:function(){
-                L.mapbox.accessToken = 'pk.eyJ1Ijoia2VteTk3MSIsImEiOiJNS3UwWVgwIn0.XMwOcHaSlli4iZ8dBbfbOA';
+            init: function () {
+                L.mapbox.accessToken = MAPBOX_API_ACCESSTOKEN;
 
-                map = L.mapbox.map('map', 'kemy971.7a67c729', {zoomControl: false, attributionControl : false}).setView([47.218371, -1.553621], 15);
+                map = L.mapbox.map('map', MAPBOX_SECRETKEY, {
+
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([CURRENTCITY.position.lat,CURRENTCITY.position.lng], DEFAULT_MAP_ZOOM);
 
 
-                map.on('click',function(){
+                map.on('click', function () {
                     if ($scope.open) {
                         $scope.$apply($scope.toggleMainPanel());
 
                     }
                 });
 
-                map.on('zoomend',function(){
+                map.on('zoomend', function () {
                     console.log(map.getZoom());
-                    if(map.getZoom()<= 14 && !miniMarker){
+                    if (map.getZoom() <= 14 && !miniMarker) {
                         miniMarker = true;
                         Stations.updateMarkerStations();
-                    }else if(map.getZoom()> 14 && miniMarker){
+                    } else if (map.getZoom() > 14 && miniMarker) {
                         miniMarker = false;
                         Stations.updateMarkerStations();
                     }
                 });
 
             },
-            center:function(lat,lng,zoom){
-                map.setView([lat,lng],zoom);
+            center: function (lat, lng, zoom) {
+                map.setView([lat, lng], zoom);
+            },
+            bound: function (station) {
+                var point = L.point(0, 50);
+                var boundOption = {
+                    "padding": point
+                };
+                map.fitBounds([
+                    [User.position.lat, User.position.lng],
+                    [station.position.lat, station.position.lng]
+                ], boundOption);
+            },
+            getDirection: function (station) {
+                //Custom Marker
+                var CustomRouteLayer = MQ.Routing.RouteLayer.extend({
+                    createStopMarker: function (location, stopNumber) {
+                        var custom_icon,
+                            marker;
+
+                        custom_icon = L.icon({
+                            iconUrl: '//www.mapquestapi.com/staticmap/geticon?uri=poi-red_1.png',
+                            iconSize: [0, 0],
+                            iconAnchor: [10, 29],
+                            popupAnchor: [0, -29]
+                        });
+
+                        marker = L.marker(location.latLng, {icon: custom_icon})
+                            .addTo(map);
+
+                        return marker;
+                    }
+                });
+
+                //Make Directions
+                var dir = MQ.routing.directions();
+                dir.route({
+                    locations: [
+                        {latLng: {lat: User.position.lat, lng: User.position.lng}},
+                        {latLng: {lat: station.position.lat, lng: station.position.lng}
+                        }],
+                    options: {routeType: 'pedestrian'}
+                });
+
+                //Draw Directions Option
+                var dirOption = {
+                    directions: dir,
+                    draggable: false,
+                    ribbonOptions: {
+                        draggable: false,
+                        ribbonDisplay: {color: '#4f4f4f', opacity: 0.5}
+                    }
+                };
+
+
+                if (route == null) {
+                    route = new CustomRouteLayer(dirOption);
+                } else {
+                    map.removeLayer(route);
+                    route = new CustomRouteLayer(dirOption);
+
+                }
+
+                map.addLayer(route);
+            },
+            hideDirection: function () {
+                map.removeLayer(route);
             }
         };
 
 
-        //Initialisation de l'application
-        var startApp = function () {
+        //
+        (function () {
             Utils.log('Starting App');
 
             Map.init();
 
             $scope.toggleMainPanel();
 
-            $http.get('https://api.jcdecaux.com/vls/v1/stations?contract='+city[cityIndex]+ apiKey)
+            $http.get(JCDECAUX_WEBSERVICE_URL)
                 .success(function (data) {
-
+                    Utils.log("Nombre de stations : "+ data.length);
                     Utils.sort(data);
                     Stations.init(data);
 
@@ -670,12 +791,12 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                     Utils.show("starter-content");
 
                     geolocation.startLocation();
-                    timer = app.startRefresh();
+                    app.startRefresh();
                 });
-        };
+        })();
 
         //Auto-start app
-        (function () {
+        /*(function () {
             $http.get("../config.json")
                 .success(function (data) {
                     $scope.cb.checked = data.stationCB;
@@ -685,10 +806,10 @@ starter = angular.module('starter', ['ionic','ngCordova','chart.js'])
                 .error(function (e) {
                     startApp();
                 });
-        })();
+        })();*/
     });
 
 angular.element(document).ready(function () {
-    var domElement = document.getElementById('starter');
-    angular.bootstrap(domElement, ["starter"]);
+    var domElement = document.getElementById("openBike");
+    angular.bootstrap(domElement, ["openBike"]);
 }); 
